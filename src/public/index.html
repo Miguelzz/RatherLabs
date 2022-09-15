@@ -58,10 +58,11 @@
                 </div>
 
                 <div class="card-body d-flex align-items-center justify-content-evenly">
-                    <input value="BTC-USD" style="width: 40%;" class="form-control " type="text" placeholder="PAR">
+                    <input id="bid-ask-v" value="BTC-USD" style="width: 40%;" class="form-control " type="text"
+                        placeholder="PAR">
                     <div class="d-flex justify-content-end">
-                        <button class="btn btn-primary me-md-2" type="button">API</button>
-                        <button class="btn btn-primary" type="button">WEB SOCKET</button>
+                        <button id="bid-ask" class="btn btn-primary me-md-2" type="button">API</button>
+                        <button id="bid-ask-w" class="btn btn-primary" type="button">WEB SOCKET</button>
                     </div>
                 </div>
             </div>
@@ -72,12 +73,30 @@
 </body>
 
 <script>
-    socket.emit("bid-ask", 'BTC-USD');
+
     socket.on("bid-ask", (list) => {
         const tbody = list.slice(0, 5).reduce((a, x) => a + `<tr><td>${x.price}</td><td>${x.count}</td><td>${x.amount}</td></tr>`, '')
         document.getElementById('best-bid').innerHTML = tbody
         document.getElementById('best-ask').innerHTML = tbody
+
     });
+
+    document.getElementById('bid-ask').addEventListener('click', async () => {
+        socket.emit("bid-ask", '');
+        const value = document.getElementById('bid-ask-v').value
+        const result = await fetch('api/bid-ask/' + value)
+        const list = await result.json()
+        console.log(list)
+
+        const tbody = list.slice(0, 5).reduce((a, x) => a + `<tr><td>${x.price}</td><td>${x.count}</td><td>${x.amount}</td></tr>`, '')
+        document.getElementById('best-bid').innerHTML = tbody
+        document.getElementById('best-ask').innerHTML = tbody
+    })
+
+    document.getElementById('bid-ask-w').addEventListener('click', () => {
+        const value = document.getElementById('bid-ask-v').value
+        socket.emit("bid-ask", value);
+    })
 
 </script>
 
