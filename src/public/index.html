@@ -58,8 +58,14 @@
                 </div>
 
                 <div class="card-body d-flex align-items-center justify-content-evenly">
-                    <input id="bid-ask-v" value="BTC-USD" style="width: 20%;" class="form-control " type="text"
-                        placeholder="PAR">
+
+                    <div class="row">
+                        <label class="col-sm-2 col-form-label">Par</label>
+                        <div class="col-sm-10">
+                            <input id="bid-ask-v" class="form-control" value="BTC-USD" placeholder="PAR">
+                        </div>
+                    </div>
+
                     <div class="d-flex justify-content-end">
                         <button id="bid-ask" class="btn btn-primary me-md-2" type="button">API</button>
                         <button id="bid-ask-w" class="btn btn-primary" type="button">WEB SOCKET</button>
@@ -70,47 +76,49 @@
     </div>
 
 
-    <div class="container mt-4">
+    <div class="container mt-4 mb-5">
         <div class="d-flex justify-content-evenly">
             <div class="shadow-sm card text-dark bg-light" style="width: 50rem;">
                 <div class="card-body">
-                    <h5 class="card-title">Mejores precios</h5>
-                </div>
-                <div class="mb-2 d-flex justify-content-evenly">
-                    <h6>Compra</h6>
-                    <div style="width: 3rem"></div>
-                    <h6>Venta</h6>
-                </div>
-                <div class="d-flex">
+                    <h5 class="card-title">Operar</h5>
 
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th style="width:33%">Precio</th>
-                                <th style="width:33%">Cantidad</th>
-                                <th style="width:33%">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="best-44"></tbody>
-                    </table>
-                    <div style="width: 3rem"></div>
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th style="width:33%">Precio</th>
-                                <th style="width:33%">Cantidad</th>
-                                <th style="width:33%">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="best-44"></tbody>
-                    </table>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <div class=" d-flex flex-column align-items-center justify-content-center">
+                            <h5>Precio efectivo</h5>
+                            <h2 id="price">$0</h2>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex justify-content-evenly align-items-center mt-3">
+
+                        <div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="bs" id="buy">
+                                <label class="form-check-label" for="buy">
+                                    Comprar
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="bs" id="sell" checked>
+                                <label class="form-check-label" for="sell">
+                                    Vender
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Par</label>
+                            <input id="buy-sell-v" value="BTC-USD" class="form-control" placeholder="BTC-USD">
+                        </div>
+                        <div>
+                            <label class="form-label">Monto</label>
+                            <input id="buy-sell-m" value="5000" type="number" class="form-control"
+                                placeholder="USD $5.000">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card-body d-flex align-items-center justify-content-evenly">
-                    <input id="buy-sell-v" value="BTC-USD" style="width: 20%;" class="form-control " type="text"
-                        placeholder="PAR">
-                    <input id="buy-sell-v2" style="width: 30%;" class="form-control " type="text"
-                        placeholder="AMOUNT TO BE TRADED">
                     <div class="d-flex justify-content-end">
                         <button id="buy-sell" class="btn btn-primary me-md-2" type="button">API</button>
                         <button id="buy-sell-w" class="btn btn-primary" type="button">WEB SOCKET</button>
@@ -124,31 +132,82 @@
 <script>
 
     document.getElementById('title').innerHTML = 'BTC-USD'
-    socket.on("bid-ask", (list) => {
-        const tbody = list.slice(0, 5).reduce((a, x) => a + `<tr><td>${x.price}</td><td>${x.count}</td><td>${x.amount}</td></tr>`, '')
-        document.getElementById('best-bid').innerHTML = tbody
-        document.getElementById('best-ask').innerHTML = tbody
 
-    });
+    const currency = (val) => val.toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    })
+
+    const formatPrice = state => {
+        return {
+            ...state,
+            price: currency(state.price)
+        }
+    }
+
+    const addRows = (list) => {
+        return list.slice(0, 5).reduce((a, x) => a + `<tr><td>${x.price}</td><td>${x.count}</td><td>${x.amount}</td></tr>`, '')
+    }
+
+    const bestBidAsk = ({ bidList, askList }) => {
+        const value = document.getElementById('bid-ask-v').value
+
+        document.getElementById('title').innerHTML = value
+        document.getElementById('best-bid').innerHTML = addRows(bidList.map(formatPrice))
+        document.getElementById('best-ask').innerHTML = addRows(askList.map(formatPrice))
+    }
+
+
 
     document.getElementById('bid-ask').addEventListener('click', async () => {
         socket.emit("bid-ask", '');
+
         const value = document.getElementById('bid-ask-v').value
         const result = await fetch('api/bid-ask/' + value)
         const list = await result.json()
-        console.log(list)
 
-        const tbody = list.slice(0, 5).reduce((a, x) => a + `<tr><td>${x.price}</td><td>${x.count}</td><td>${x.amount}</td></tr>`, '')
-        document.getElementById('best-bid').innerHTML = tbody
-        document.getElementById('best-ask').innerHTML = tbody
-        document.getElementById('title').innerHTML = value
+        bestBidAsk(list)
     })
 
+
+    socket.emit("bid-ask", 'BTC-USD');
+    socket.on("bid-ask", (list) => bestBidAsk(list));
     document.getElementById('bid-ask-w').addEventListener('click', () => {
-        const value = document.getElementById('bid-ask-v').value
-        document.getElementById('title').innerHTML = value
-        socket.emit("bid-ask", value);
+        const par = document.getElementById('bid-ask-v').value
+        document.getElementById('title').innerHTML = par
+        socket.emit("bid-ask", par);
     })
+
+
+    /// ++++++++++++++++++++
+
+    const price = ({ buy, sell }) => {
+        if (document.getElementById("buy").checked)
+            document.getElementById('price').innerHTML = currency(buy | 0)
+        else
+            document.getElementById('price').innerHTML = currency(sell | 0)
+    }
+
+    document.getElementById('buy-sell').addEventListener('click', async () => {
+        socket.emit("buy-sell", '', 0);
+
+        const par = document.getElementById('buy-sell-v').value
+        const quantity = document.getElementById('buy-sell-m').value
+        const result = await fetch(`api/buy-sell/${par}/${quantity}`)
+        const buySell = await result.json()
+
+        price(buySell)
+    })
+
+    document.getElementById('buy-sell-w').addEventListener('click', () => {
+        const par = document.getElementById('buy-sell-v').value
+        const quantity = document.getElementById('buy-sell-m').value
+        socket.emit("buy-sell", par, quantity);
+    })
+
+    socket.emit("buy-sell", 'BTC-USD', 5000);
+    socket.on("buy-sell", (buySell) => price(buySell));
+
 
 </script>
 

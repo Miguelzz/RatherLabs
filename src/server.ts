@@ -7,8 +7,9 @@ import path from 'path';
 import bidAskRoute from './services/bid-ask'
 import buySellRoute from './services/buy-sell'
 
-import './external-services/bitfinex'
-import { Bitfinex, subscribers } from "./external-services/bitfinex";
+
+import SubscribeBook, { getQuantity, mapBidAsk } from "./external-services/bitfinex/book";
+
 
 const app = express.default();
 const server = http.createServer(app);
@@ -29,33 +30,33 @@ io.on('connection', function (socket) {
 
     socket.on("bid-ask", (par) => {
         socket.data.bidAsk?.unsubscribe()
-        socket.data.bidAsk = subscribers.getPar(par)
-            .subscribe((x) => {
-                socket.emit('bid-ask', x)
-            })
+        if (par != '')
+            socket.data.bidAsk = SubscribeBook.get(par).pipe(mapBidAsk)
+                .subscribe((x) => socket.emit("bid-ask", x))
     });
 
-    socket.on("buy-sell", (par) => {
+    socket.on("buy-sell", (par, quantity) => {
         socket.data.buySell?.unsubscribe()
-        socket.data.buySell = subscribers.getPar(par)
-            .subscribe((x) => {
-                socket.emit('buy-sell', x)
-            })
+        if (par != '')
+            socket.data.buySell = SubscribeBook.get('BTC-USD')
+                .pipe(getQuantity(quantity))
+                .subscribe((x) => socket.emit("buy-sell", x))
+
     });
 
     socket.on('disconnect', () => {
         console.log('user disconnected');
         socket.data.bidAsk?.unsubscribe()
         socket.data.buySell?.unsubscribe()
-
     });
 
 });
 
 
 server.listen(3000, () => {
-    new Bitfinex('BTC-USD')
-    new Bitfinex('ETH-USD')
+    SubscribeBook.get('BTC-USD')
+    SubscribeBook.get('ETH-USD')
+
     console.log(
         `Server running on http://localhost:3000/`
     )
